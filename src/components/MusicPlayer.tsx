@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import Icon from '@/components/ui/icon';
 
@@ -46,40 +46,26 @@ const tracksByMood: Track[][] = [
 export default function MusicPlayer({ moodIndex }: MusicPlayerProps) {
   const [activeTrack, setActiveTrack] = useState(0);
 
+  useEffect(() => {
+    setActiveTrack(0);
+  }, [moodIndex]);
+
   const tracks = tracksByMood[moodIndex];
   const track = tracks[activeTrack];
-
-  const openYoutube = (youtubeId: string) => {
-    window.open(`https://www.youtube.com/watch?v=${youtubeId}`, '_blank');
-  };
 
   return (
     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 max-w-xl w-full">
 
-      {/* Featured track — превью с кнопкой */}
-      <div
-        className="relative rounded-2xl overflow-hidden mb-5 cursor-pointer group"
-        onClick={() => openYoutube(track.youtubeId)}
-      >
-        <img
-          src={`https://img.youtube.com/vi/${track.youtubeId}/mqdefault.jpg`}
-          alt={track.title}
-          className="w-full object-cover"
-          style={{ aspectRatio: '16/9' }}
+      {/* YouTube iframe */}
+      <div className="rounded-2xl overflow-hidden mb-5" style={{ aspectRatio: '16/9' }}>
+        <iframe
+          key={`${moodIndex}-${activeTrack}`}
+          src={`https://www.youtube-nocookie.com/embed/${track.youtubeId}?rel=0&modestbranding=1`}
+          title={track.title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="w-full h-full border-0"
         />
-        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
-          <div className="w-16 h-16 rounded-full bg-white/90 group-hover:bg-white group-hover:scale-110 transition-all duration-300 flex items-center justify-center shadow-2xl">
-            <Icon name="Play" size={28} className="text-black ml-1" />
-          </div>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-          <p className="text-white font-medium text-sm">{track.title}</p>
-          <p className="text-white/60 text-xs">{track.artist}</p>
-        </div>
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-black/60 rounded-full px-3 py-1">
-          <Icon name="Youtube" size={12} className="text-red-400" />
-          <span className="text-white/80 text-xs">Слушать на YouTube</span>
-        </div>
       </div>
 
       {/* Track meta */}
@@ -105,10 +91,10 @@ export default function MusicPlayer({ moodIndex }: MusicPlayerProps) {
             key={i}
             onClick={() => setActiveTrack(i)}
             className={cn(
-              'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200 group',
+              'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200',
               activeTrack === i
                 ? 'bg-white/15 border border-white/20'
-                : 'hover:bg-white/8 border border-transparent'
+                : 'hover:bg-white/10 border border-transparent'
             )}
           >
             <div className={cn(
@@ -121,16 +107,7 @@ export default function MusicPlayer({ moodIndex }: MusicPlayerProps) {
               <p className={cn('text-sm truncate', activeTrack === i ? 'text-white' : 'text-white/60')}>{t.title}</p>
               <p className="text-white/30 text-xs">{t.artist}</p>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-white/30 text-xs">{t.duration}</span>
-              <button
-                onClick={(e) => { e.stopPropagation(); openYoutube(t.youtubeId); }}
-                className="opacity-0 group-hover:opacity-100 transition-opacity text-white/40 hover:text-white"
-                title="Слушать на YouTube"
-              >
-                <Icon name="ExternalLink" size={13} />
-              </button>
-            </div>
+            <span className="text-white/30 text-xs flex-shrink-0">{t.duration}</span>
           </button>
         ))}
       </div>
