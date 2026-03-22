@@ -43,7 +43,7 @@ const tracksByMood: Track[][] = [
   // 🤩 Энергия — Поп
   [
     { title: 'Happy', artist: 'Pharrell Williams', duration: '3:53', youtubeId: 'y6Sxv-sUYtM', bpm: '96', effect: 'Повышает энергию и мотивацию' },
-    { title: 'Can\'t Stop the Feeling', artist: 'Justin Timberlake', duration: '3:56', youtubeId: 'ru0K8uYEZWw', bpm: '113', effect: 'Стимулирует выработку эндорфинов' },
+    { title: "Can't Stop the Feeling", artist: 'Justin Timberlake', duration: '3:56', youtubeId: 'ru0K8uYEZWw', bpm: '113', effect: 'Стимулирует выработку эндорфинов' },
     { title: 'Walking on Sunshine', artist: 'Katrina & The Waves', duration: '3:58', youtubeId: 'iPUmE-tne5U', bpm: '102', effect: 'Поднимает настроение за 1 мин' },
   ],
 ];
@@ -51,8 +51,7 @@ const tracksByMood: Track[][] = [
 export default function MusicPlayer({ moodIndex }: MusicPlayerProps) {
   const [activeTrack, setActiveTrack] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const tracks = tracksByMood[moodIndex];
   const track = tracks[activeTrack];
@@ -60,116 +59,85 @@ export default function MusicPlayer({ moodIndex }: MusicPlayerProps) {
   useEffect(() => {
     setActiveTrack(0);
     setIsPlaying(false);
-    setProgress(0);
   }, [moodIndex]);
 
-  useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        setProgress((p) => {
-          if (p >= 100) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return p + 0.5;
-        });
-      }, 200);
+  const getEmbedUrl = (youtubeId: string, playing: boolean) =>
+    `https://www.youtube.com/embed/${youtubeId}?autoplay=${playing ? 1 : 0}&enablejsapi=1&controls=0&modestbranding=1&rel=0`;
+
+  const handlePlayPause = () => {
+    if (!isPlaying) {
+      setIsPlaying(true);
     } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      setIsPlaying(false);
     }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isPlaying]);
+  };
 
   const handleTrackSelect = (index: number) => {
     setActiveTrack(index);
-    setIsPlaying(false);
-    setProgress(0);
+    setIsPlaying(true);
   };
 
-  const openYoutube = () => {
-    window.open(`https://www.youtube.com/watch?v=${track.youtubeId}`, '_blank');
+  const handleNext = () => {
+    handleTrackSelect((activeTrack + 1) % tracks.length);
+  };
+
+  const handlePrev = () => {
+    handleTrackSelect((activeTrack - 1 + tracks.length) % tracks.length);
   };
 
   return (
     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl p-6 max-w-xl w-full">
-      {/* Now playing */}
-      <div className="flex items-center gap-4 mb-6">
-        <div
-          className={cn(
-            'w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-teal-500 flex items-center justify-center flex-shrink-0 transition-all duration-300',
-            isPlaying && 'shadow-lg shadow-violet-500/40'
-          )}
-        >
-          <Icon name="Music2" size={28} className="text-white" />
+
+      {/* Скрытый YouTube плеер */}
+      <div className="rounded-2xl overflow-hidden mb-6" style={{ aspectRatio: '16/9' }}>
+        <iframe
+          ref={iframeRef}
+          key={`${moodIndex}-${activeTrack}-${isPlaying}`}
+          src={getEmbedUrl(track.youtubeId, isPlaying)}
+          allow="autoplay; encrypted-media"
+          allowFullScreen
+          className="w-full h-full border-0"
+          title={track.title}
+        />
+      </div>
+
+      {/* Track info */}
+      <div className="flex items-center gap-4 mb-5">
+        <div className={cn(
+          'w-12 h-12 rounded-xl bg-gradient-to-br from-violet-600 to-teal-500 flex items-center justify-center flex-shrink-0 transition-all duration-300',
+          isPlaying && 'shadow-lg shadow-violet-500/40'
+        )}>
+          <Icon name="Music2" size={22} className="text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-white font-medium truncate">{track.title}</p>
           <p className="text-white/50 text-sm">{track.artist}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <Icon name="HeartPulse" size={12} className="text-rose-400 flex-shrink-0" />
+          <div className="flex items-center gap-2 mt-0.5">
+            <Icon name="HeartPulse" size={11} className="text-rose-400 flex-shrink-0" />
             <span className="text-rose-300 text-xs">{track.effect}</span>
           </div>
         </div>
-      </div>
-
-      {/* Progress bar */}
-      <div className="mb-4">
-        <div
-          className="h-1 bg-white/10 rounded-full cursor-pointer overflow-hidden"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const pct = ((e.clientX - rect.left) / rect.width) * 100;
-            setProgress(Math.max(0, Math.min(100, pct)));
-          }}
-        >
-          <div
-            className="h-full bg-gradient-to-r from-violet-500 to-teal-400 rounded-full transition-all duration-200"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <div className="flex justify-between text-white/30 text-xs mt-1">
-          <span>{track.bpm} BPM</span>
-          <span>{track.duration}</span>
-        </div>
+        <span className="text-white/30 text-xs flex-shrink-0">{track.bpm} BPM</span>
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-center gap-4 mb-6">
-        <button
-          onClick={() => handleTrackSelect((activeTrack - 1 + tracks.length) % tracks.length)}
-          className="text-white/50 hover:text-white transition-colors"
-        >
+      <div className="flex items-center justify-center gap-4 mb-5">
+        <button onClick={handlePrev} className="text-white/50 hover:text-white transition-colors">
           <Icon name="SkipBack" size={20} />
         </button>
-
         <button
-          onClick={() => setIsPlaying(!isPlaying)}
+          onClick={handlePlayPause}
           className="w-12 h-12 rounded-full bg-white flex items-center justify-center hover:scale-105 transition-transform shadow-lg"
         >
           <Icon name={isPlaying ? 'Pause' : 'Play'} size={20} className="text-black ml-0.5" />
         </button>
-
-        <button
-          onClick={() => handleTrackSelect((activeTrack + 1) % tracks.length)}
-          className="text-white/50 hover:text-white transition-colors"
-        >
+        <button onClick={handleNext} className="text-white/50 hover:text-white transition-colors">
           <Icon name="SkipForward" size={20} />
-        </button>
-
-        <button
-          onClick={openYoutube}
-          title="Слушать на YouTube"
-          className="ml-4 flex items-center gap-1.5 text-white/40 hover:text-white transition-colors text-xs"
-        >
-          <Icon name="ExternalLink" size={14} />
-          <span>YouTube</span>
         </button>
       </div>
 
       {/* Track list */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {tracks.map((t, i) => (
           <button
             key={i}
